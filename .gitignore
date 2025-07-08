@@ -1,0 +1,7 @@
+.venv
+.vscode
+.DS_Store
+data
+saved_models
+results
+src/__pycache__
