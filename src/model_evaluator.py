@@ -1,6 +1,7 @@
 import os
 import datetime
 import pandas as pd
+import shutil
 import matplotlib.pyplot as plt
 
 class ModelEvaluator:
@@ -8,6 +9,12 @@ class ModelEvaluator:
     def __init__(self, config):
         self.config = config
         self.results = {}
+        self._shared_timestamp = None  # For consistent file naming
+
+    def _get_or_create_timestamp(self):
+        if self._shared_timestamp is None:
+            self._shared_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        return self._shared_timestamp
 
     def evaluate_model(self, model, test_data, model_name):
         """
@@ -51,10 +58,34 @@ class ModelEvaluator:
         os.remove(temp_path)
         return size_mb
 
+    def create_comparison_table(self, timestamp=None):
+        """
+        Create a comparison table of model results and save with a timestamp.
+        """
+        df = pd.DataFrame.from_dict(self.results, orient='index')
+        df = df.round(4)
+
+        column_order = ['test_accuracy', 'test_loss', 'model_size_mb', 'parameters']
+        df = df[column_order]
+        df.columns = ['Accuracy (%)', 'Loss', 'Size (MB)', 'Parameters']
+        df['Accuracy (%)'] = df['Accuracy (%)'] * 100
+
+        print("\n" + "="*80)
+        print("MODEL COMPARISON RESULTS")
+        print("="*80)
+        print(df.to_string())
+
+        # Save with and without timestamp
+        if timestamp is not None:
+            df.to_csv(f'{self.config.RESULTS_DIR}/model_comparison_{timestamp}.csv')
+
+        return df
+
     def plot_training_history(self, histories):
         """
         Plot training and validation accuracy/loss for all models.
         Saves the plots and training history to CSV.
+        Calls create_comparison_table to save model comparison with the same timestamp.
         """
 
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
@@ -86,7 +117,7 @@ class ModelEvaluator:
                 })
 
         plt.tight_layout()
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = self._get_or_create_timestamp()
         plt.savefig(f'{self.config.RESULTS_DIR}/training_comparison_{timestamp}.png', dpi=300, bbox_inches='tight')
         plt.show()
 
@@ -94,27 +125,13 @@ class ModelEvaluator:
         df = pd.DataFrame(all_history)
         df.to_csv(f'{self.config.RESULTS_DIR}/training_history_{timestamp}.csv', index=False)
 
-    def create_comparison_table(self):
-        """
-        Create a comparison table of model results and save with a timestamp.
-        """
+        # Save a snapshot of config.py with the same timestamp
+        config_src_path = os.path.join(os.path.dirname(__file__), 'config.py')
+        config_dst_path = os.path.join(self.config.RESULTS_DIR, f'config_snapshot_{timestamp}.py')
+        try:
+            shutil.copyfile(config_src_path, config_dst_path)
+        except Exception as e:
+            print(f"Warning: Could not save config snapshot: {e}")
 
-        df = pd.DataFrame.from_dict(self.results, orient='index')
-        df = df.round(4)
-
-        column_order = ['test_accuracy', 'test_loss', 'model_size_mb', 'parameters']
-        df = df[column_order]
-        df.columns = ['Accuracy (%)', 'Loss', 'Size (MB)', 'Parameters']
-        df['Accuracy (%)'] = df['Accuracy (%)'] * 100
-
-        print("\n" + "="*80)
-        print("MODEL COMPARISON RESULTS")
-        print("="*80)
-        print(df.to_string())
-
-        # Save with and without timestamp
-        df.to_csv(f'{self.config.RESULTS_DIR}/model_comparison.csv')
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        df.to_csv(f'{self.config.RESULTS_DIR}/model_comparison_{timestamp}.csv')
-
-        return df
+        # Call create_comparison_table with the same timestamp
+        self.create_comparison_table(timestamp=timestamp)

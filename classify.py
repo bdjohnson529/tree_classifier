@@ -62,10 +62,12 @@ def main():
             model_name, train_data, val_data
         )
         
+        '''
         # Fine-tuning phase
         model, fine_tune_history, fine_tune_time = transfer_learning.fine_tune_model(
             model, model_name, train_data, val_data
         )
+        '''
         
         # Evaluate model
         predicted_classes, true_classes = evaluator.evaluate_model(
@@ -73,13 +75,13 @@ def main():
         )
         
         # Convert to TensorFlow Lite
-        tflite_path, tflite_size = tflite_converter.convert_to_tflite(model, model_name)
+        # tflite_path, tflite_size = tflite_converter.convert_to_tflite(model, model_name)
         
         # Store timing information
         training_times[model_name] = {
             'feature_extraction_time': train_time,
-            'fine_tuning_time': fine_tune_time,
-            'total_time': train_time + fine_tune_time
+            'fine_tuning_time': fine_tune_time if 'fine_tune_time' in locals() else None,
+            'total_time': train_time + fine_tune_time if 'fine_tune_time' in locals() else train_time
         }
     
     # Generate final comparison
@@ -97,11 +99,16 @@ def main():
     print(f"\n{'='*60}")
     print("TRAINING TIMES COMPARISON")
     print(f"{'='*60}")
+
     for model_name, times in training_times.items():
         print(f"{model_name}:")
         print(f"  Feature Extraction: {times['feature_extraction_time']:.2f}s")
-        print(f"  Fine-tuning: {times['fine_tuning_time']:.2f}s")
-        print(f"  Total: {times['total_time']:.2f}s")
+        if times['fine_tuning_time'] is not None:
+            print(f"  Fine-tuning: {times['fine_tuning_time']:.2f}s")
+            print(f"  Total: {times['total_time']:.2f}s")
+        else:
+            print("  Fine-tuning: SKIPPED")
+            print(f"  Total: {times['feature_extraction_time']:.2f}s")
     
     print(f"\nAll models and results saved in:")
     print(f"- Models: {config.MODEL_SAVE_DIR}/")

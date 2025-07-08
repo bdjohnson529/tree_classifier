@@ -17,6 +17,22 @@ def find_latest_history_file(results_dir):
     return files[0]
 
 
+def find_latest_config_file(results_dir, history_file):
+    # Find the timestamp in the history file name
+    import re
+    match = re.search(r'training_history_(\d{8}_\d{6})', history_file)
+    if not match:
+        print("Could not extract timestamp from history file name.")
+        return None
+    timestamp = match.group(1)
+    config_path = os.path.join(results_dir, f"config_snapshot_{timestamp}.py")
+    if os.path.exists(config_path):
+        return config_path
+    else:
+        print(f"No config snapshot found for timestamp {timestamp}.")
+        return None
+
+
 def analyze_history(df):
     # Assume only one model for simplicity
     model_name = df['model'].iloc[0]
@@ -45,8 +61,10 @@ def analyze_history(df):
         print("- If accuracy is not improving, try adjusting INITIAL_LEARNING_RATE, FINE_TUNE_LEARNING_RATE, or unfreezing more layers.")
 
 
-def get_ai_recommendation(history_df, config_path="src/config.py"):
+def get_ai_recommendation(history_df, config_path=None):
     # Read config.py for context
+    if config_path is None:
+        config_path = "src/config.py"
     try:
         with open(config_path, "r") as f:
             config_code = f.read()
@@ -67,7 +85,7 @@ def get_ai_recommendation(history_df, config_path="src/config.py"):
         f"{config_code}\n\n"
         "Training history (CSV):\n"
         f"{history_csv}\n\n"
-        "Please provide your recommendations in a clear, concise list."
+        "Please provide your recommendations as a concise list of bullet points, no more than 20 lines, and keep each point brief."
     )
 
     # Call Claude or other LLM API (replace with your actual endpoint and API key)
@@ -115,7 +133,8 @@ def main():
         df = pd.read_csv(history_file)
         analyze_history(df)
         print("\n---\nCalling Claude for AI-powered recommendations...\n")
-        get_ai_recommendation(df)
+        config_path = find_latest_config_file(results_dir, history_file)
+        get_ai_recommendation(df, config_path=config_path)
 
 if __name__ == "__main__":
     main()

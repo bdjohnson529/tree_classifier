@@ -6,7 +6,7 @@ class Config:
     VALIDATION_SPLIT = 0.25
 
     # Training parameters
-    INITIAL_EPOCHS = 1
+    INITIAL_EPOCHS = 2
     FINE_TUNE_EPOCHS = 1
     INITIAL_LEARNING_RATE = 0.003
     FINE_TUNE_LEARNING_RATE = 0.0001
