@@ -46,7 +46,7 @@ def main():
     )    
     
     # Models to compare (as in the paper)
-    models_to_train = ["MobileNetV3Small"]
+    models_to_train = config.MODELS_TO_TRAIN
     
     all_results = {}
     training_times = {}
@@ -62,12 +62,10 @@ def main():
             model_name, train_data, val_data
         )
         
-        '''
         # Fine-tuning phase
         model, fine_tune_history, fine_tune_time = transfer_learning.fine_tune_model(
             model, model_name, train_data, val_data
         )
-        '''
         
         # Evaluate model
         predicted_classes, true_classes = evaluator.evaluate_model(
