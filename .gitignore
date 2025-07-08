@@ -6,3 +6,4 @@ saved_models
 results
 src/__pycache__
 secrets.env
+__pycache__

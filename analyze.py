@@ -206,51 +206,29 @@ def analyze_all_runs(results_dir):
             {"role": "user", "content": prompt}
         ]
     }
-    try:
-        response = requests.post(api_url, headers=headers, data=json.dumps(data))
-        if response.status_code == 200:
-            result = response.json()
-            print("\nAI Recommendations (multi-run):\n")
-            if "content" in result and isinstance(result["content"], list):
-                print(result["content"][0].get("text", result["content"][0]))
-            else:
-                print(result)
-        else:
-            print("Error calling Claude API:", response.text)
-    except Exception as e:
-        print("Exception during Claude API call:", e)
+    # Use ConversationManager for multi-turn, history-aware conversation
+    from conversation import ConversationManager
+    cm = ConversationManager(
+        system_prompt="You are an expert in deep learning model training. You will be given experiment summaries and user questions. Provide concise, actionable advice for improving model performance.",
+        model="claude-3-opus-20240229",
+        api_url=api_url,
+        api_key=api_key
+    )
+    # Initial message: experiment summary and request for recommendations
+    print("\nSending experiment summary to AI...\n")
+    ai_response = cm.send_message(prompt)
+    print("\nAI Recommendations (multi-run):\n")
+    print(ai_response)
 
-    # Pause and allow user to enter a question
-    user_question = input("\nYou may now enter a follow-up question for the AI (or press Enter to exit): ")
-    if user_question.strip():
-        followup_prompt = (
-            "You are an expert in deep learning model training. "
-            "Here is a follow-up question from the user about the previous experiments and recommendations. "
-            f"Question: {user_question}\n"
-            "Please answer concisely."
-        )
-        followup_data = {
-            "model": "claude-3-opus-20240229",
-            "max_tokens": 512,
-            "messages": [
-                {"role": "user", "content": followup_prompt}
-            ]
-        }
-        try:
-            followup_response = requests.post(api_url, headers=headers, data=json.dumps(followup_data))
-            if followup_response.status_code == 200:
-                followup_result = followup_response.json()
-                print("\nAI Follow-up Answer:\n")
-                if "content" in followup_result and isinstance(followup_result["content"], list):
-                    print(followup_result["content"][0].get("text", followup_result["content"][0]))
-                else:
-                    print(followup_result)
-            else:
-                print("Error calling Claude API for follow-up:", followup_response.text)
-        except Exception as e:
-            print("Exception during Claude API follow-up call:", e)
-    else:
-        print("Exiting.")
+    # Multi-turn CLI loop
+    while True:
+        user_question = input("\nYou may now enter a follow-up question for the AI (or press Enter to exit): ")
+        if not user_question.strip():
+            print("Exiting.")
+            break
+        ai_followup = cm.send_message(user_question)
+        print("\nAI Follow-up Answer:\n")
+        print(ai_followup)
 
 
 def main():

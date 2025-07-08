@@ -11,7 +11,7 @@ class Config:
     # Training parameters
     INITIAL_EPOCHS = 15
     FINE_TUNE_EPOCHS = 10
-    INITIAL_LEARNING_RATE = 0.001
+    INITIAL_LEARNING_RATE = 0.0005
     FINE_TUNE_LEARNING_RATE = 0.0001
 
     # Model parameters
