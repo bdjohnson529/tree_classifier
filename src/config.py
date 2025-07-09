@@ -9,7 +9,7 @@ class Config:
     VALIDATION_SPLIT = 0.25
 
     # Training parameters
-    INITIAL_EPOCHS = 15
+    INITIAL_EPOCHS = 20
     FINE_TUNE_EPOCHS = 10
     INITIAL_LEARNING_RATE = 0.0005
     FINE_TUNE_LEARNING_RATE = 0.0001
@@ -17,6 +17,7 @@ class Config:
     # Model parameters
     NUM_CLASSES = 23
     DROPOUT_RATE = 0.5
+    NUM_FROZEN_LAYERS = 2  # Number of layers to freeze in feature extraction
 
     # Paths
     DATA_DIR = "data"

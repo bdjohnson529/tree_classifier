@@ -51,10 +51,11 @@ class MobileNetTransferLearning:
 
         base_model = self.create_base_model(model_name)
 
-        # Unfreeze the last 20 layers of the base model for feature extraction
-        for layer in base_model.layers[:-1]:
+        # Unfreeze only the last N layers of the base model for feature extraction
+        num_frozen = len(base_model.layers) - self.config.NUM_FROZEN_LAYERS
+        for layer in base_model.layers[:num_frozen]:
             layer.trainable = False
-        for layer in base_model.layers[-1:]:
+        for layer in base_model.layers[num_frozen:]:
             layer.trainable = True
 
         model = models.Sequential([
