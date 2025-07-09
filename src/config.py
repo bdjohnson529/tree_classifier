@@ -16,7 +16,7 @@ class Config:
 
     # Model parameters
     NUM_CLASSES = 23
-    DROPOUT_RATE = 0.3
+    DROPOUT_RATE = 0.5
 
     # Paths
     DATA_DIR = "data"

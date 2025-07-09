@@ -4,6 +4,8 @@ import os
 import glob
 import pandas as pd
 from dotenv import load_dotenv
+from src.conversation import ConversationManager
+
 
 load_dotenv("secrets.env")  # Load environment variables from secrets.env
 
@@ -207,7 +209,6 @@ def analyze_all_runs(results_dir):
         ]
     }
     # Use ConversationManager for multi-turn, history-aware conversation
-    from conversation import ConversationManager
     cm = ConversationManager(
         system_prompt="You are an expert in deep learning model training. You will be given experiment summaries and user questions. Provide concise, actionable advice for improving model performance.",
         model="claude-3-opus-20240229",
