@@ -12,12 +12,11 @@ class DataProcessor:
         If validation_dir is not provided, split train_dir using validation_split.
         """
 
-        # Data augmentation pipeline
-        data_augmentation = tf.keras.Sequential([
-            layers.RandomFlip("horizontal"),
-            layers.RandomRotation(0.1),
-            layers.RandomZoom(0.1),
-        ])
+        # Choose augmentation strategy based on config
+        if hasattr(self.config, 'USE_ADVANCED_AUGMENTATION') and self.config.USE_ADVANCED_AUGMENTATION:
+            data_augmentation = self._create_advanced_augmentation()
+        else:
+            data_augmentation = self._create_basic_augmentation()
 
         if validation_dir:
             train_ds = tf.keras.utils.image_dataset_from_directory(
@@ -74,6 +73,62 @@ class DataProcessor:
             print("Labels:", labels.numpy())
 
         return train_ds, val_ds
+
+    def _create_basic_augmentation(self):
+        """Create basic data augmentation pipeline."""
+        return tf.keras.Sequential([
+            layers.RandomFlip("horizontal"),
+            layers.RandomRotation(0.1),
+            layers.RandomZoom(0.1),
+        ])
+
+    def _create_advanced_augmentation(self):
+        """Create advanced data augmentation pipeline with more sophisticated techniques."""
+        return tf.keras.Sequential([
+            layers.RandomFlip("horizontal"),
+            layers.RandomRotation(0.2),
+            layers.RandomZoom(0.15),
+            layers.RandomContrast(0.2),
+            layers.RandomBrightness(0.2),
+            layers.RandomTranslation(0.1, 0.1),
+            # Custom augmentation for better leaf/tree feature learning
+            layers.Lambda(lambda x: tf.image.random_hue(x, 0.1)),
+            layers.Lambda(lambda x: tf.image.random_saturation(x, 0.8, 1.2)),
+            layers.Lambda(lambda x: tf.image.random_jpeg_quality(x, 85, 100)),
+        ])
+
+    def create_test_time_augmentation_dataset(self, test_ds, n_augmentations=5):
+        """
+        Create test-time augmentation dataset for improved inference accuracy.
+        """
+        augmentation = tf.keras.Sequential([
+            layers.RandomFlip("horizontal"),
+            layers.RandomRotation(0.05),
+            layers.RandomZoom(0.05),
+            layers.RandomBrightness(0.1),
+        ])
+        
+        def augment_batch(x, y):
+            # Create multiple augmented versions of each image
+            augmented_images = []
+            for _ in range(n_augmentations):
+                aug_x = augmentation(x)
+                augmented_images.append(aug_x)
+            
+            # Stack all augmented versions
+            stacked = tf.stack(augmented_images, axis=1)  # Shape: (batch, n_aug, height, width, channels)
+            
+            # Reshape to treat each augmentation as a separate sample
+            batch_size = tf.shape(x)[0]
+            reshaped = tf.reshape(stacked, (-1, *x.shape[1:]))
+            
+            # Repeat labels for each augmentation
+            repeated_labels = tf.repeat(y, n_augmentations, axis=0)
+            
+            return reshaped, repeated_labels
+        
+        tta_ds = test_ds.map(augment_batch)
+        return tta_ds, n_augmentations
 
     def prepare_dataset_from_directory(self, data_dir):
         """

@@ -23,7 +23,12 @@ class ModelEvaluator:
         """
 
         print(f"\nEvaluating {model_name}...")
-        predictions = model.predict(test_data)
+        
+        # Check if test-time augmentation is enabled
+        if hasattr(self.config, 'USE_TEST_TIME_AUGMENTATION') and self.config.USE_TEST_TIME_AUGMENTATION:
+            predictions = self._evaluate_with_tta(model, test_data, model_name)
+        else:
+            predictions = model.predict(test_data)
 
         import numpy as np
         predicted_classes = np.argmax(predictions, axis=1)
@@ -46,6 +51,36 @@ class ModelEvaluator:
         print(f"Model Size: {self.results[model_name]['model_size_mb']:.2f} MB")
 
         return predicted_classes, true_classes
+
+    def _evaluate_with_tta(self, model, test_data, model_name):
+        """
+        Evaluate model with test-time augmentation for improved accuracy.
+        """
+        from .data_processor import DataProcessor
+        
+        print(f"Using test-time augmentation for {model_name}...")
+        
+        # Create data processor for TTA
+        data_processor = DataProcessor(self.config)
+        
+        # Create TTA dataset
+        tta_dataset, n_augmentations = data_processor.create_test_time_augmentation_dataset(
+            test_data, self.config.TTA_AUGMENTATIONS
+        )
+        
+        # Get predictions on augmented data
+        tta_predictions = model.predict(tta_dataset, verbose=0)
+        
+        # Reshape predictions to group by original image
+        n_original_samples = len(tta_predictions) // n_augmentations
+        reshaped_predictions = tta_predictions.reshape(n_original_samples, n_augmentations, -1)
+        
+        # Average predictions across augmentations
+        final_predictions = np.mean(reshaped_predictions, axis=1)
+        
+        print(f"TTA completed with {n_augmentations} augmentations per image")
+        
+        return final_predictions
 
     def get_model_size(self, model):
         """
